@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<link rel="stylesheet" type="text/css" href="geomwar.css">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.11.5/paper-full.js" type="text/javascript" charset="utf-8" async defer></script>
+	<script type="text/paperscript" canvas="myCanvas">
+		// Bullet Configuration
+			var projectileWidth=3;
+			var projectileLengthScale=3;
+			var projectileColor="#fffb47";
+			var projectileVelocityScale=5;
+			var framePerProjectile=1;
+		// --------------------
+		var enemies = [];
+		var projectiles = [];
+		var pathFindingScale = 1;
+		var lineAngle;
+		var lineDirection;
+		var mousePos;
+		var click =false;
+		var	ang=new Point;
+		var line = new Path.Line(new Point, new Point(view.width/2,view.height/2));
+		line.strokeColor='white';
+		console.log(line);
+		var player = new Path.Rectangle({
+			position: [view.size.width/2,view.size.height/2],
+			size: [75, 75],
+			strokeColor: "#ffffff",
+			velocity:new Point()
+		});
+		enemiesAdd();
+
+		function shoot(){
+			var path = new Path.Line({
+				segments:[player.position,player.position+(lineDirection*projectileLengthScale)],
+				velocity: lineDirection*projectileVelocityScale,
+				strokeColor: projectileColor,
+				strokeWidth: projectileWidth
+			});
+			projectiles.push(path);
+		}
+
+		function enemiesAdd(){
+			var path = new Path.Rectangle({
+				position:[50,50],
+				size:[50,50],
+				strokeColor:"#ff2d2d",
+				velocity:new Point(),
+				rotation:45
+			});
+			enemies.push(path);
+		}
+		function onMouseMove(event){
+			mousePos=event.point;
+			line.segments[1].point=mousePos;
+		}
+
+		function onMouseDown(event){
+			click=true;
+			console.log(click);
+		}
+
+		function onMouseUp(){
+			click=false;
+			console.log(click);
+		}
+
+		function onKeyDown(event){
+
+			if (event.key==="w"){
+				player.up=true;
+			}
+			else if (event.key==="a"){
+				player.left=true;
+			}
+			else if (event.key==="s"){
+				player.down=true;
+			}
+			else if (event.key==="d"){
+				player.right=true;
+			}
+			if (event.key==="i"){
+				player.shootUp=true;
+			}
+			else if (event.key==="j"){
+				player.shootLeft=true;
+			}
+			else if (event.key==="k"){
+				player.shootDown=true;
+			}
+			else if (event.key==="l"){
+				player.shootRight=true;
+			}
+		}
+
+		function onKeyUp(event){
+			if (event.key==="w"){
+				player.up=false;
+			}
+			else if (event.key==="a"){
+				player.left=false;
+			}
+			else if (event.key==="s"){
+				player.down=false;
+			}
+			else if (event.key==="d"){
+				player.right=false;
+			}
+			if (event.key==="i"){
+				player.shootUp=false;
+			}
+			else if (event.key==="j"){
+				player.shootLeft=false;
+			}
+			else if (event.key==="k"){
+				player.shootDown=false;
+			}
+			else if (event.key==="l"){
+				player.shootRight=false;
+			}
+		}
+
+		function updatePlayerVelocity(){
+			var deceleration=0.4;
+			var acceleration=1;
+			var maxSpeed=10;
+			if (player.up){
+				if (player.velocity.y>-maxSpeed){
+					player.velocity.y+=-acceleration;
+				}
+			} else if(player.velocity.y<0){
+				if (player.velocity.y+deceleration<0){
+					player.velocity.y+= deceleration;
+				}else{
+					player.velocity.y=0;
+				}
+			}
+			if (player.left){
+				if (player.velocity.x>-maxSpeed){
+					player.velocity.x+=-acceleration;
+				}
+			} else if(player.velocity.x<0){
+				if (player.velocity.x+deceleration){
+					player.velocity.x+= deceleration;
+				} else {
+					player.velocity.x=0;
+				}
+			}
+			if (player.right){
+				if (player.velocity.x<maxSpeed){
+					player.velocity.x+=acceleration;
+				}
+			} else if(player.velocity.x>0){
+				if (player.velocity.x-deceleration>0){
+					player.velocity.x+= -deceleration;
+				} else {
+					player.velocity.x=0;
+				}
+			}
+			if (player.down){
+				if (player.velocity.y<maxSpeed){
+					player.velocity.y+=acceleration;
+				}
+			} else if(player.velocity.y>0){
+				if (player.velocity.y-deceleration>0) {
+					player.velocity.y+= -deceleration;
+				} else{
+					player.velocity.y=0;
+				}
+			}
+			if (player.velocity.length>maxSpeed){
+				player.velocity.length=maxSpeed;
+			}
+		}
+
+		
+
+		function updateProjectileVelocity(){
+			for (i=0;i<projectiles.length;i++){
+				projectiles[i].position+=projectiles[i].velocity;
+				if(projectiles[i].position.x>view.size.width||projectiles[i].position.y>view.size.height||projectiles[i].position.x<0||projectiles[i].position.y<0){
+					projectiles[i].remove();
+					projectiles.splice(i,1);
+				}
+			}
+		}
+
+		function onFrame(event){
+			if (event.count%60===0){
+				console.log(event.count/event.time)
+			}
+			
+			line.segments[0].point=player.position;
+			lineDirection=line.segments[1].point-line.segments[0].point;
+			lineDirection.length=1;
+			lineAngle = lineDirection.angle;
+			if (lineAngle<0){
+				lineAngle+=360;
+			}
+			if (click&&event.count%framePerProjectile===0){
+				shoot();
+			}
+			updatePlayerVelocity();
+			updateProjectileVelocity();
+			player.position+=player.velocity;
+			for (var i =0; i<enemies.length;i++){
+				enemies[i].position+=enemies[i].velocity;
+			}
+		}
+		
+	</script>
+	<title>Geometry Wars</title>
+</head>
+<body>
+	<canvas id="myCanvas" resize></canvas>
+</body>
+</html>
