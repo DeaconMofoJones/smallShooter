@@ -5,12 +5,24 @@
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.11.5/paper-full.js" type="text/javascript" charset="utf-8" async defer></script>
 	<script type="text/paperscript" canvas="myCanvas">
 		// Bullet Configuration
-			var projectileWidth=3;
-			var projectileLengthScale=3;
+			var projectileWidth=2;
+			var projectileLengthScale=20;
 			var projectileColor="#fffb47";
-			var projectileVelocityScale=5;
-			var framePerProjectile=1;
+			var projectileVelocityScale=20;
+			var framePerProjectile=3;
 		// --------------------
+		var gameOver=false;
+
+		console.log(view)
+		var round=0;
+
+		var enemyMaxSpeed=7;
+		var enemyAcceleration = 1;
+		var spawnPadding=50;
+		var topRightCorner=new Point(view.size.width-spawnPadding,spawnPadding);
+		var topLeftCorner=new Point(spawnPadding,spawnPadding);
+		var bottomRightCorner=new Point(view.size.width-spawnPadding,view.size.height-spawnPadding);
+		var bottomLeftCorner=new Point(spawnPadding,view.size.height-spawnPadding);
 		var enemies = [];
 		var projectiles = [];
 		var pathFindingScale = 1;
@@ -20,15 +32,17 @@
 		var click =false;
 		var	ang=new Point;
 		var line = new Path.Line(new Point, new Point(view.width/2,view.height/2));
-		line.strokeColor='white';
 		console.log(line);
 		var player = new Path.Rectangle({
 			position: [view.size.width/2,view.size.height/2],
-			size: [75, 75],
+			size: [view.size.height/25, view.size.height/25],
 			strokeColor: "#ffffff",
 			velocity:new Point()
 		});
-		enemiesAdd();
+
+		function ranVal(maxVal){
+			return Math.floor(Math.random()*maxVal)
+		}
 
 		function shoot(){
 			var path = new Path.Line({
@@ -40,13 +54,15 @@
 			projectiles.push(path);
 		}
 
-		function enemiesAdd(){
+		function enemiesAdd(spawnLocation){
 			var path = new Path.Rectangle({
-				position:[50,50],
-				size:[50,50],
-				strokeColor:"#ff2d2d",
+				position:spawnLocation,
+				size:[view.size.height/25,view.size.height/25],
+				strokeColor:"#54e2ff",
 				velocity:new Point(),
-				rotation:45
+				rotation:45,
+				playerTracking:(Math.random()*.3)+.3,
+				maxSpeedOffset:(Math.random()*3)
 			});
 			enemies.push(path);
 		}
@@ -121,9 +137,9 @@
 		}
 
 		function updatePlayerVelocity(){
-			var deceleration=0.4;
+			var deceleration=0.3;
 			var acceleration=1;
-			var maxSpeed=10;
+			var maxSpeed=6;
 			if (player.up){
 				if (player.velocity.y>-maxSpeed){
 					player.velocity.y+=-acceleration;
@@ -173,7 +189,17 @@
 			}
 		}
 
-		
+		function updateEnemyVelocity(){
+			for (var i=0; i<enemies.length;i++){
+				var targetDirection = (player.position-enemies[i].position);
+				targetDirection.length=enemies[i].playerTracking;
+				enemies[i].velocity+=targetDirection;
+				if (enemies[i].velocity.length>enemyMaxSpeed-enemies[i].maxSpeedOffset){
+					enemies[i].velocity.length=enemyMaxSpeed-enemies[i].maxSpeedOffset;
+				}
+				enemies[i].position+=enemies[i].velocity;
+			}
+		}
 
 		function updateProjectileVelocity(){
 			for (i=0;i<projectiles.length;i++){
@@ -184,10 +210,25 @@
 				}
 			}
 		}
+		function spawnEnemies(){
+			if (enemies.length<=round*4*.05){
+				for (var i=0;i<round;i++){
+					enemiesAdd(topLeftCorner);
+					enemiesAdd(topRightCorner);
+					enemiesAdd(bottomLeftCorner);
+					enemiesAdd(bottomRightCorner);
+				}
+				round++;
+			}
+		}
 
 		function onFrame(event){
-			if (event.count%60===0){
-				console.log(event.count/event.time)
+			if (gameOver===false){
+			// if (event.count%60===0){
+			// 	console.log(event.count/event.time)
+			// }
+			if(event.count%180===0){
+				spawnEnemies()
 			}
 			
 			line.segments[0].point=player.position;
@@ -200,12 +241,32 @@
 			if (click&&event.count%framePerProjectile===0){
 				shoot();
 			}
+			for (var i=0;i<projectiles.length;i++){
+				projectiles[i].strokeColor.hue+=2;
+			}
 			updatePlayerVelocity();
 			updateProjectileVelocity();
+			updateEnemyVelocity();
 			player.position+=player.velocity;
-			for (var i =0; i<enemies.length;i++){
-				enemies[i].position+=enemies[i].velocity;
+			for (var i=0; i<enemies.length;i++){
+				var collisions= enemies[i].getIntersections(player);
+				if (collisions.length>0){
+					gameOver=true;
+					player.remove();
+				}
+				for (var j=0;j<projectiles.length;j++){
+					if (enemies[i]){
+						var intersections = enemies[i].getIntersections(projectiles[j]);
+						if (intersections.length>0){
+							enemies[i].remove();
+							enemies.splice(i,1);
+							projectiles[j].remove();
+							projectiles.splice(j,1);
+						}
+					}
+				}
 			}
+		}
 		}
 		
 	</script>

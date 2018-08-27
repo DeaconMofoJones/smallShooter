@@ -1,9 +1,12 @@
-html, body {
+html, body, canvas {
 	padding: 0;
 	margin: 0;
 }
-
+body{
+	text-align: center;
+}
 canvas {
-	width: 100%;
+	width: 95vh;
+    height: 95vh;
 	background: black;
 }
